@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Daily Expense Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <h2>Daily Expense Tracker</h2>
+    
+    <form id="expenseForm">
+        <div class="form-group">
+            <label>Description:</label>
+            <input type="text" id="description" placeholder="e.g., Biryani, Petrol">
+        </div>
+        <div class="form-group">
+            <label>Amount (Rs.):</label>
+            <input type="number" id="amount" placeholder="e.g., 250">
+        </div>
+        <button type="submit">Add Expense</button>
+    </form>
+
+    <div id="message" class="error"></div>
+
+    <h3>Expenses List:</h3>
+    <ul id="expenseList"></ul>
+    
+    <div class="total">Total Amount: Rs. <span id="totalAmount">0</span></div>
+</div>
+
+<script>
+    const form = document.getElementById('expenseForm');
+    const messageDiv = document.getElementById('message');
+
+    async function loadExpenses() {
+        try {
+            const response = await fetch('/api/expenses'); // GET request by default
+            const data = await response.json(); // JSON text ko JS Array mein badla
+
+            const list = document.getElementById('expenseList');
+            list.innerHTML = '';
+            let total = 0;
+
+            // Loop chala kar HTML tags banana (Browser ki language mein conversion)
+            data.forEach(exp => {
+                const li = document.createElement('li');
+                li.innerHTML = `<span>${exp.description}</span> <strong>Rs. ${exp.amount}</strong>`;
+                list.appendChild(li);
+                total += exp.amount; // Total calculate karna
+            });
+
+            document.getElementById('totalAmount').innerText = total;
+        } catch (err) {
+            console.error("An error occurred while loading the data:", err);
+        }
+    }
+
+    // 2. POST Request: Form submit hone par data server ko bhejna
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault(); // Page refresh hone se rokna
+
+        const description = document.getElementById('description').value;
+        const amount = parseFloat(document.getElementById('amount').value);
+
+        try {
+            const response = await fetch('/api/expenses', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ description, amount }) 
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                // Agar Validation Fail hui (Status 400), error show karein
+                messageDiv.className = "error";
+                messageDiv.innerText = result.error;
+            } else {
+                // Agar kamyabi hui (Status 201)
+                messageDiv.className = "success";
+                messageDiv.innerText = result.message;
+                form.reset(); // Form khali karein
+                loadExpenses(); // List dobara refresh karein
+            }
+        } catch (err) {
+            messageDiv.innerText = "Server se rabta nahi ho saka.";
+        }
+    });
+
+
+    loadExpenses();
+</script>
+
+</body>
+</html>
